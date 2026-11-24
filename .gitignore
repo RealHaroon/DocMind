@@ -1,0 +1,37 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*_Key.txt
+*_key.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+backend/.venv/
+*.egg-info/
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+*.tsbuildinfo
+
+# Local application data
+*.db
+*.db-shm
+*.db-wal
+storage/uploads/*
+storage/chroma/*
+!storage/uploads/.gitkeep
+!storage/chroma/.gitkeep
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+
