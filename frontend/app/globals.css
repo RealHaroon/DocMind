@@ -38,3 +38,21 @@ textarea {
   background: rgb(255 255 255 / 9%);
 }
 
+.answer-markdown p + p { margin-top: 0.85rem; }
+.answer-markdown ul, .answer-markdown ol { margin: 0.75rem 0 0.75rem 1.25rem; }
+.answer-markdown ul { list-style: disc; }
+.answer-markdown ol { list-style: decimal; }
+.answer-markdown li { margin: 0.25rem 0; }
+.answer-markdown strong { font-weight: 650; color: white; }
+.answer-markdown h1, .answer-markdown h2, .answer-markdown h3 { margin: 1rem 0 0.5rem; font-weight: 650; color: white; }
+.answer-markdown blockquote { margin: 0.75rem 0; border-left: 2px solid #8b5cf6; padding-left: 1rem; color: #a1a1aa; }
+
+html.light { color-scheme: light; }
+html.light body, html.light [class*="bg-[#09090b]"] { background: #f5f5f8 !important; color: #18181b !important; }
+html.light [class*="bg-[#0c0c0f]"], html.light [class*="bg-[#0b0b0e]"], html.light [class*="bg-[#111116]"], html.light [class*="bg-[#14141a]"], html.light [class*="bg-[#17171d]"], html.light [class*="bg-[#16161b]"], html.light [class*="bg-[#22222a]"] { background: #fff !important; color: #27272a !important; }
+html.light [class*="text-zinc-100"], html.light [class*="text-zinc-200"], html.light [class*="text-zinc-300"] { color: #27272a !important; }
+html.light [class*="text-zinc-400"], html.light [class*="text-zinc-500"], html.light [class*="text-zinc-600"] { color: #52525b !important; }
+html.light [class*="border-white"] { border-color: rgb(24 24 27 / 12%) !important; }
+html.light .answer-markdown { color: #27272a; }
+html.light .answer-markdown strong, html.light .answer-markdown h1, html.light .answer-markdown h2, html.light .answer-markdown h3 { color: #18181b; }
+

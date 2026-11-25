@@ -2,14 +2,14 @@
 
 DocMind is a local-first, AI-powered PDF workspace for asking questions, generating summaries, and tracing every answer back to its source page. It is designed for an 8 GB Linux laptop: document embeddings run locally while language generation uses an explicitly selected Gemini or Groq provider.
 
-> **Status:** Phase 1 is complete: the FastAPI/SQLite foundation, configuration API, and responsive Next.js application shell are in place. PDF ingestion, retrieval, chat, and the viewer are implemented in later phases.
+> **Status:** Phase 4 adds streaming answers, saved conversations, in-app PDF viewing, and three summary styles. Phase 5 focuses on final testing and polish.
 
 ## Architecture
 
 - **Frontend:** Next.js App Router, TypeScript, Tailwind CSS, shadcn-style components, and Lucide icons.
 - **Backend:** FastAPI, Pydantic Settings, Uvicorn, and SQLite.
-- **Planned RAG pipeline:** PyMuPDF, `sentence-transformers/all-MiniLM-L6-v2`, and persistent ChromaDB.
-- **Inference:** Google Gemini by default, with Groq as an explicit alternative. API keys stay in the backend environment.
+- **Document pipeline:** PyMuPDF, `sentence-transformers/all-MiniLM-L6-v2`, and persistent ChromaDB.
+- **Inference:** Google Gemini by default, with Groq as an explicit alternative. API keys stay in the backend environment; switching providers in the chat composer takes effect without a restart.
 
 ## Requirements
 
@@ -26,6 +26,7 @@ No Docker, Ollama, local chat model, or paid infrastructure is required.
 cd backend
 python3 -m venv .venv
 source .venv/bin/activate
+pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements-dev.txt
 cp .env.example .env
 uvicorn app.main:app --reload
@@ -49,6 +50,8 @@ cd backend
 .venv/bin/python -m uvicorn app.main:app --reload
 .venv/bin/python -m pytest
 ```
+
+For a fresh environment at this mounted path, first run `.venv/bin/python -m pip install torch --index-url https://download.pytorch.org/whl/cpu` before the requirements command. This keeps PyTorch CPU-only and avoids large CUDA downloads.
 
 ## Frontend setup
 
@@ -88,16 +91,31 @@ The model identifiers are configuration, not constants in provider code. The def
 
 - SQLite data is stored locally and ignored by Git.
 - Uploaded PDFs and Chroma data live under `storage/` and are ignored except for directory placeholders.
-- In a later phase, MiniLM downloads automatically on first use (roughly 90 MB of model files, plus cache overhead). It will be loaded once per backend process.
-- Embedding work will be concurrency-limited to protect low-memory machines.
+- MiniLM downloads automatically on first upload (roughly 90 MB of model files, plus cache overhead). It is loaded once per backend process.
+- Embedding work runs one document at a time to protect low-memory machines.
 
 ## Current API
 
 - `GET /api/health` — application readiness and version
 - `GET /api/settings` — safe runtime settings (never API keys)
 - `PUT /api/settings` — provider, model, retrieval, and theme preferences
+- `POST /api/documents/upload` — upload one to ten PDFs as multipart `files`
+- `GET /api/documents` and `GET /api/documents/{id}` — list and inspect processing status
+- `GET /api/documents/{id}/file` — view the saved PDF
+- `DELETE /api/documents/{id}` — remove the PDF, metadata, and vectors
+- `POST /api/chat` — answer a question from selected, ready documents with validated source metadata
+- `POST /api/chat/stream` — stream answer text and a final citation-verified response as server-sent events
+- `GET /api/conversations`, `GET /api/conversations/{id}` — list and restore saved conversations
+- `POST /api/conversations`, `PATCH /api/conversations/{id}`, `DELETE /api/conversations/{id}` — create, rename, and delete conversations
+- `POST /api/documents/{id}/summarize` — concise, detailed, or key takeaway summary
 
-Additional document, conversation, chat, summary, and streaming routes are introduced with their corresponding working features.
+Files need selectable text. Encrypted, empty, corrupted, and image-only PDFs receive clear errors. The first upload downloads the MiniLM weights into the local Hugging Face cache; allow time and disk space for that one-time step. Embedding jobs run one at a time to protect an 8 GB laptop.
+
+To chat, upload a text PDF, wait until its status is **ready**, select its checkbox in the library, and enter a question. Answers stream into the chat and are saved in SQLite with the selected documents. Source chips navigate the in-app PDF viewer to the cited page. The assistant receives only retrieved chunks from selected documents; PDF text is treated as untrusted context. A response with absent or invalid source markers is replaced by an explicit “not found” answer. Assistant Markdown is rendered safely, so any `*` formatting markers are displayed as formatting rather than raw syntax. The prompt also asks for clean prose with minimal markup.
+
+Use the sidebar to restore, rename (double-click), or delete conversations. The welcome screen offers concise, detailed, and key takeaway summaries for the first selected PDF. Long PDFs are summarized in batches and combined hierarchically to avoid sending the whole document in one request.
+
+Provider settings are saved locally through `PUT /api/settings`; switching providers never sends content to the other service automatically. The official [Google Gen AI Python SDK](https://googleapis.github.io/python-genai/) and [Groq chat API](https://console.groq.com/docs/text-chat) are used with 30-second timeouts. Missing credentials, quotas, invalid credentials, and unavailable model IDs return clear API errors. Model access depends on the API key's account and can change.
 
 ## Repository layout
 

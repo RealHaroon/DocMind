@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./docmind.db"
     max_upload_size_mb: int = Field(default=20, ge=1, le=200)
     rag_top_k: int = Field(default=5, ge=1, le=20)
+    chunk_size: int = Field(default=800, ge=200, le=4000)
+    chunk_overlap: int = Field(default=120, ge=0, le=1000)
 
     allowed_origins: list[str] = [
         "http://localhost:3000",
