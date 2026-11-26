@@ -32,7 +32,5 @@ def retrieve(question: str, document_ids: list[str], top_k: int, settings: Setti
     ):
         if metadata["document_id"] not in document_ids or not text.strip():
             continue
-        if distance > 0.85:
-            continue
         chunks.append(RetrievedChunk(chunk_id, metadata["document_id"], metadata["filename"], int(metadata["page"]), text, float(distance)))
     return chunks

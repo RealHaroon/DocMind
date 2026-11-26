@@ -1,7 +1,7 @@
 from pathlib import Path
 from unittest.mock import patch
 
-import fitz
+import pymupdf as fitz
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings, get_settings

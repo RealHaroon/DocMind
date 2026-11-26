@@ -9,7 +9,7 @@ from app.db.database import connect
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.llm.base import ProviderError
 from app.services.conversation_service import create_conversation, get_conversation, save_exchange
-from app.services.rag_service import SYSTEM, answer_question, build_prompt, finalize_answer, get_provider
+from app.services.rag_service import SYSTEM, answer_question, build_prompt, finalize_answer, get_provider, repair_citations
 from app.services.retrieval_service import retrieve
 
 
@@ -75,7 +75,8 @@ def stream_chat(payload: ChatRequest, settings: Settings = Depends(get_settings)
                 for token in provider.stream(SYSTEM, build_prompt(payload.question, chunks, history), model):
                     parts.append(token)
                     yield _event("delta", {"text": token})
-                result = finalize_answer("".join(parts), chunks, provider_name, model)
+                generated = repair_citations("".join(parts), payload.question, chunks, provider, model, history)
+                result = finalize_answer(generated, chunks, provider_name, model)
             except ProviderError as exc:
                 yield _event("error", {"message": str(exc), "status": exc.status_code})
                 return

@@ -43,8 +43,29 @@ def finalize_answer(generated: str, chunks: list[RetrievedChunk], provider_name:
     return ChatResponse(answer=generated, citations=citations, provider=provider_name, model=model)
 
 
+def has_valid_citations(generated: str, chunks: list[RetrievedChunk]) -> bool:
+    markers = {int(value) for value in MARKER.findall(generated)}
+    return bool(markers) and markers.issubset(set(range(1, len(chunks) + 1)))
+
+
+def repair_citations(generated: str, question: str, chunks: list[RetrievedChunk], provider, model: str, history: list[dict[str, str]] | None = None) -> str:
+    if not generated.strip() or generated.strip().lower().startswith(NO_ANSWER.lower()) or has_valid_citations(generated, chunks):
+        return generated
+    prompt = build_prompt(question, chunks, history)
+    correction = (
+        f"{prompt}\n\nYour previous draft did not contain valid source markers:\n"
+        f"<draft>\n{generated[:6000]}\n</draft>\n\n"
+        "Rewrite the answer using only supported facts from the numbered excerpts. "
+        "Put a valid [number] marker after each factual paragraph. "
+        f"If the excerpts do not support the answer, reply exactly: {NO_ANSWER}"
+    )
+    return provider.generate(SYSTEM, correction, model)
+
+
 def answer_question(question: str, chunks: list[RetrievedChunk], provider_name: str, model: str, settings: Settings, history: list[dict[str, str]] | None = None) -> ChatResponse:
     if not chunks:
         return finalize_answer("", chunks, provider_name, model)
-    generated = get_provider(provider_name, settings).generate(SYSTEM, build_prompt(question, chunks, history), model)
+    provider = get_provider(provider_name, settings)
+    generated = provider.generate(SYSTEM, build_prompt(question, chunks, history), model)
+    generated = repair_citations(generated, question, chunks, provider, model, history)
     return finalize_answer(generated, chunks, provider_name, model)

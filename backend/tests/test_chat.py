@@ -33,6 +33,15 @@ def test_retrieval_filters_unselected_documents(tmp_path: Path) -> None:
     assert found[0].page == 12
 
 
+def test_retrieval_keeps_weak_but_real_matches_for_broad_questions(tmp_path: Path) -> None:
+    settings = Settings(chroma_path=tmp_path / "vectors")
+    add_chunks(settings, "first", "paper.pdf", [TextChunk(1, "The document introduces binary search.", 0)], [[0.0, 1.0]])
+    with patch("app.services.retrieval_service.embed_texts", return_value=[[1.0, 0.0]]):
+        found = retrieve("What is this document about?", ["first"], 5, settings)
+    assert len(found) == 1
+    assert found[0].distance > 0.85
+
+
 def test_citations_only_from_retrieved_chunks() -> None:
     settings = Settings(gemini_api_key="test-key")
     with patch("app.services.rag_service.GeminiProvider") as provider:
@@ -44,6 +53,18 @@ def test_citations_only_from_retrieved_chunks() -> None:
         rejected = answer_question("What happened?", [sample_chunk()], "gemini", "test-model", settings)
         assert rejected.answer == NO_ANSWER
         assert rejected.citations == []
+
+
+def test_missing_citation_is_repaired_once() -> None:
+    settings = Settings(gemini_api_key="test-key")
+    with patch("app.services.rag_service.GeminiProvider") as provider:
+        provider.return_value.generate.side_effect = [
+            "The treatment improved by 20 percent.",
+            "The treatment improved by 20 percent. [1]",
+        ]
+        response = answer_question("What happened?", [sample_chunk()], "gemini", "test-model", settings)
+    assert response.citations[0].page == 12
+    assert provider.return_value.generate.call_count == 2
 
 
 def test_chat_requires_ready_selected_documents(tmp_path: Path) -> None:

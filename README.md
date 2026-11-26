@@ -2,7 +2,7 @@
 
 DocMind is a local-first, AI-powered PDF workspace for asking questions, generating summaries, and tracing every answer back to its source page. It is designed for an 8 GB Linux laptop: document embeddings run locally while language generation uses an explicitly selected Gemini or Groq provider.
 
-> **Status:** Phase 4 adds streaming answers, saved conversations, in-app PDF viewing, and three summary styles. Phase 5 focuses on final testing and polish.
+> **Status:** Core application and Phase 5 verification are complete. The backend test suite covers upload, extraction, retrieval, chat, citations, conversations, streaming, summaries, and document deletion.
 
 ## Architecture
 
@@ -72,6 +72,8 @@ npm run typecheck
 npm run build
 ```
 
+The repository also includes an API flow test that uploads a generated PDF, indexes it in ChromaDB, streams an answer with a page citation, restores the saved conversation, and deletes the PDF and its vectors. From `backend/`, run `.venv/bin/python -m pytest tests/test_flow.py`, or use the backend test command above for the full suite. A live Gemini account check was performed during development; live Groq access requires your own `GROQ_API_KEY`.
+
 ## Configuration
 
 Copy `backend/.env.example` to `backend/.env` and add keys only for providers you intend to use. Never commit `.env`.
@@ -111,7 +113,9 @@ The model identifiers are configuration, not constants in provider code. The def
 
 Files need selectable text. Encrypted, empty, corrupted, and image-only PDFs receive clear errors. The first upload downloads the MiniLM weights into the local Hugging Face cache; allow time and disk space for that one-time step. Embedding jobs run one at a time to protect an 8 GB laptop.
 
-To chat, upload a text PDF, wait until its status is **ready**, select its checkbox in the library, and enter a question. Answers stream into the chat and are saved in SQLite with the selected documents. Source chips navigate the in-app PDF viewer to the cited page. The assistant receives only retrieved chunks from selected documents; PDF text is treated as untrusted context. A response with absent or invalid source markers is replaced by an explicit “not found” answer. Assistant Markdown is rendered safely, so any `*` formatting markers are displayed as formatting rather than raw syntax. The prompt also asks for clean prose with minimal markup.
+To chat, upload a text PDF, wait until its status is **ready**, select its checkbox in the library, and enter a question. Answers stream into the chat and are saved in SQLite with the selected documents. Source chips navigate the in-app PDF viewer to the cited page. The assistant receives only retrieved chunks from selected documents; PDF text is treated as untrusted context. If the model still cannot provide valid source markers after one correction, DocMind returns an explicit “not found” answer. Assistant Markdown is rendered safely, so any `*` formatting markers are displayed as formatting rather than raw syntax. The prompt also asks for clean prose with minimal markup.
+
+The document library shows processing state, offers a larger click target for each ready PDF, supports selecting all ready PDFs, and has an **OK** button to return to chat. Retrieval ranks the selected documents' best matches without a fixed similarity cutoff, so broad questions can still use relevant pages. If the model omits source markers, DocMind asks it once to add citations grounded in those retrieved pages before returning the answer.
 
 Use the sidebar to restore, rename (double-click), or delete conversations. The welcome screen offers concise, detailed, and key takeaway summaries for the first selected PDF. Long PDFs are summarized in batches and combined hierarchically to avoid sending the whole document in one request.
 
